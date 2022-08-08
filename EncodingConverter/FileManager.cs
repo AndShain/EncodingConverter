@@ -1,13 +1,12 @@
 ﻿using System.Text;
 using System.Xml;
+using UtfUnknown;
 
 namespace EncodingConverter
 {
     public class FileManager
     {
         private string DirectoryPath { get; set; } = string.Empty;
-        private string BackupDirectoryPath { get; set; } = string.Empty;
-        private Encoding SourceEncoding { get; set; } = Encoding.Default;
         private Encoding DestinationEncoding { get; set; } = Encoding.Default;
         private List<string> Extensions { get; set; } = new List<string>();
         private List<string> FileNames { get; set; } = new List<string>();
@@ -16,19 +15,11 @@ namespace EncodingConverter
         {
             ReadSettingsFromXml();
         }
-        public FileManager(string directoryPath, string[] extensions, Encoding sourceEncoding, Encoding destinationEncoding)
+        public FileManager(string directoryPath, string[] extensions, Encoding destinationEncoding)
         {
             DirectoryPath = directoryPath;
             Extensions = extensions.ToList();
-            SourceEncoding = sourceEncoding;
             DestinationEncoding = destinationEncoding;
-            BackupDirectoryPath = directoryPath;
-        }
-
-        public FileManager(string directoryPath, string[] extensions, Encoding sourceEncoding, Encoding destinationEncoding, string backupDirectoryPath)
-            : this(directoryPath, extensions, sourceEncoding, destinationEncoding)
-        {
-            BackupDirectoryPath = backupDirectoryPath;
         }
 
         private void GetFileNamesWithExtension(string directory, string extension)
@@ -72,16 +63,10 @@ namespace EncodingConverter
         {
             foreach (string fileName in FileNames)
             {
-                string decodedText = Converter.ConvertTextEncoding(SourceEncoding, DestinationEncoding, ReadAllTextFromFile(SourceEncoding, fileName));
-                string destinationFileName = CreatePathToBackupDirectory(fileName);
-                Directory.CreateDirectory(Path.GetDirectoryName(destinationFileName)); // Может вернуть null
-                WriteTextToFile(DestinationEncoding, destinationFileName, decodedText);
+                Encoding sourceEncoding = CharsetDetector.DetectFromFile(fileName).Detected.Encoding; // Возвращает null, если файл пустой(без текста кодировку нельзя угадать)
+                string decodedText = Converter.ConvertTextEncoding(sourceEncoding, DestinationEncoding, ReadAllTextFromFile(sourceEncoding, fileName));
+                WriteTextToFile(DestinationEncoding, fileName, decodedText);
             }
-        }
-
-        private string CreatePathToBackupDirectory(string fileName)
-        {
-            return fileName.Replace(DirectoryPath, BackupDirectoryPath);
         }
 
         private void ReadSettingsFromXml()
@@ -96,14 +81,6 @@ namespace EncodingConverter
                     if (xmlNode.Name == "directoryPath")
                     {
                         DirectoryPath = xmlNode.InnerText;
-                    }
-                    if (xmlNode.Name == "backupDirectoryPath")
-                    {
-                        BackupDirectoryPath = xmlNode.InnerText;
-                    }
-                    if (xmlNode.Name == "sourceEncoding")
-                    {
-                        SourceEncoding = Converter.ConverTextToEncoding(xmlNode.InnerText);
                     }
                     if (xmlNode.Name == "destinationEncoding")
                     {

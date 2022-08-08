@@ -4,8 +4,7 @@ namespace EncodingConverter
 {
     public class Program
     {
-        static void Main(string[] args) // Кодировка исходного файла не определяется автоматически
-                                        // Если у файла кодировка не соотвествует sourceEncoding, выходной файл повреждается(кириллица не отображается)
+        static void Main(string[] args)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -19,6 +18,8 @@ namespace EncodingConverter
             {
                 Console.WriteLine("Files with such extensions not found");
             }
+            Console.WriteLine("Press any key to exit");
+            Console.ReadLine();
         }
     }
 }
