@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<settings>
+	<directoryPath>D:\TestUTF</directoryPath>
+	<backupDirectoryPath>D:\TestUTF_copy</backupDirectoryPath>
+	<sourceEncoding>1251</sourceEncoding>
+	<destinationEncoding>UTF8</destinationEncoding>
+	<extensions>
+		<extension>txt</extension>
+		<extension>cpp</extension>
+	</extensions>
+</settings>
