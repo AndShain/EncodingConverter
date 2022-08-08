@@ -9,13 +9,7 @@ namespace EncodingConverter
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-            Encoding sourceEncoding = Encoding.GetEncoding(1251);
-            Encoding destinationEncoding = Encoding.UTF8;
-            string directoryPath = @"D:\TestUTF";
-            string[] extensions = { "txt", "cpp" };
-            string backupDirectoryPath = @"D:\TestUTF_copy";
-
-            FileManager fileManager = new FileManager(directoryPath, extensions, sourceEncoding, destinationEncoding, backupDirectoryPath);
+            FileManager fileManager = new FileManager();
             if (fileManager.FilesWithSuchExtensionExsist())
             {
                 fileManager.ChangeFilesEncoding();
