@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace EncodingConverter
 {
@@ -6,9 +7,13 @@ namespace EncodingConverter
     {
         static void Main(string[] args)
         {
+            // Делает доступными дополнительные кодировки символов, которые не поддерживаются по умолчанию
+            // (Используется пакет System.Text.Encoding.CodePages)
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             FileManager fileManager = new FileManager();
+
+            // Если найдены файлы с требуемым расширением, меняем их кодировку
             if (fileManager.FilesWithSuchExtensionExsist())
             {
                 fileManager.ChangeFilesEncoding();
@@ -18,8 +23,6 @@ namespace EncodingConverter
             {
                 Console.WriteLine("Files with such extensions not found");
             }
-            Console.WriteLine("Press any key to exit");
-            Console.ReadLine();
         }
     }
 }
