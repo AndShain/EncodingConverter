@@ -24,6 +24,15 @@ namespace EncodingConverter
         // Список найденных полных имен файлов с требуемыми расширениями в их текстовом представлении
         private List<string> FileNames { get; set; } = new List<string>();
 
+        // Счетчик корректно сконвентированных файлов
+        private int CorrectlyProcessedFiles { get; set; } = 0;
+
+        // Счетчик файлов, кодировку которых определить не удалось
+        private int FilesWithUndefinedEncoding { get; set; } = 0;
+
+        // Счетчик файлов, кодировка которых не изменилась
+        private int UnmodifiedFiles { get; set; } = 0;
+
         // Конструктор без параметров вызывает метод, который получает настройки или задает настройки по умолчанию из xml файла
         public FileManager()
         {
@@ -42,7 +51,7 @@ namespace EncodingConverter
         private void GetFileNamesWithExtension(string directory, string extension)
         {
             // Выполняет поиск файлов в текущей директории и записывает их в список
-            foreach (string fileName in Directory.GetFiles(directory, "*." + extension)) // Нужно обработать исключение, когда указанный в настройках каталог не существует
+            foreach (string fileName in Directory.GetFiles(directory, "*." + extension))
             {
                 FileNames.Add(fileName);
             }
@@ -57,10 +66,37 @@ namespace EncodingConverter
         // Проверяет, были ли найдены файлы с требуемым расширением
         public bool FilesWithSuchExtensionExsist()
         {
-            foreach(string extension in Extensions)
+            string message;
+            // Проверяет, сущестует ли указанная в настройках директория с иходными файлами
+            if (Directory.Exists(DirectoryPath))
             {
-                GetFileNamesWithExtension(DirectoryPath, extension);
+                foreach (string extension in Extensions)
+                {
+                    GetFileNamesWithExtension(DirectoryPath, extension);
+                }
             }
+            else
+            {
+                message = string.Format("The program cannot find the directory specified in the settings {0}\n", DirectoryPath);
+                Logger.WriteTextToLog(message);
+                Console.Write(message);
+                return false;
+            }
+
+            // Вывод информации о количестве найденных файлов с требуемым расширением по указанному в DirectoryPath пути
+            message = string.Format("{0} files with the required extensions: ", FileNames.Count);
+            Logger.WriteTextToLog(message);
+            Console.Write(message);
+            foreach (string extension in Extensions)
+            {
+                message = string.Format(".{0} ", extension);
+                Logger.WriteTextToLog(message);
+                Console.Write(message);
+            }
+            message = string.Format("were found in the specified path {0} \n", DirectoryPath);
+            Logger.WriteTextToLog(message);
+            Console.Write(message);
+
             // Если список файлов пуст, возращает false
             return FileNames.Count > 0;
         }
@@ -86,13 +122,17 @@ namespace EncodingConverter
         // Меняет кодировку файла на заданную в DestinationEncoding
         public void ChangeFilesEncoding()
         {
+            string message;
             foreach (string fileName in FileNames)
             {
                 // Определяет исходную кодировку файла
                 DetectionResult? detectionResult = CharsetDetector.DetectFromFile(fileName);
                 if (detectionResult.Detected == null)
                 {
-                    Console.WriteLine("Unable to determine encoding of {0} file", fileName);
+                    FilesWithUndefinedEncoding += 1;
+                    message = string.Format("Unable to determine encoding of {0} file\n", fileName);
+                    Logger.WriteTextToLog(message);
+                    Console.Write(message);
                     continue;
                 }
                 DetectionDetail resultDetected = detectionResult.Detected;
@@ -100,12 +140,40 @@ namespace EncodingConverter
                 // Преобразует полученный результат в Encoding
                 Encoding sourceEncoding = resultDetected.Encoding;
 
-                // Преобразует исходную кодировку в заданную в DestinationEncoding, считывая текст из файла
-                string decodedText = Converter.ConvertTextEncoding(sourceEncoding, DestinationEncoding, ReadAllTextFromFile(sourceEncoding, fileName));
+                // Считываем текст из файла, которому нужно изменить кодировку
+                string decodableText = ReadAllTextFromFile(sourceEncoding, fileName);
+
+                // Создаем объект, который хранит информацию о своей кодировке,  ee строковом представлении и наличии изменений в исходной кодировке
+                DecodableFile decodableFile = new DecodableFile(sourceEncoding, decodableText);
+
+                // Преобразует исходную кодировку DecodableFile в заданную в DestinationEncoding
+                decodableFile = Converter.ConvertTextEncoding(decodableFile, DestinationEncoding);
+                if (!decodableFile.EncodingСhanged)
+                {
+                    UnmodifiedFiles += 1;
+                    message = string.Format("{0} : File is already in {1} encoding\n", fileName, sourceEncoding);
+                    Logger.WriteTextToLog(message);
+                    Console.Write(message);
+                    continue;
+                }
 
                 // Записывает строку, которая была преобразована в требуемую кодировку в файл, перезаписывая его содержимое
-                WriteTextToFile(DestinationEncoding, fileName, decodedText);
+                WriteTextToFile(DestinationEncoding, fileName, decodableFile.Text);
+
+                CorrectlyProcessedFiles += 1;
+                message = string.Format("{0} : File has been successfully converted to {1} encoding\n", fileName, DestinationEncoding);
+                Logger.WriteTextToLog(message);
+                Console.Write(message);
             }
+            message = string.Format("{0} files processed successfully.\n", CorrectlyProcessedFiles);
+            Logger.WriteTextToLog(message);
+            Console.Write(message);
+            message = string.Format("{0} files did not change the encoding.\n", UnmodifiedFiles);
+            Logger.WriteTextToLog(message);
+            Console.Write(message);
+            message = string.Format("{0} files failed to determine the encoding.\n", FilesWithUndefinedEncoding);
+            Logger.WriteTextToLog(message);
+            Console.Write(message);
         }
 
         // Проверяет наличие файла настроек. Если файл отсутствует, создает файл с настройками по умолчанию
