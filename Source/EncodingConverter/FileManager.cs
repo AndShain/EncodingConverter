@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml;
 using UtfUnknown;
 using System;
+using System.Text.RegularExpressions;
 
 namespace EncodingConverter
 {
@@ -181,7 +182,16 @@ namespace EncodingConverter
         {
             if (File.Exists("settings.xml"))
             {
-                ReadSettingsFromXml();
+                try
+                {
+                    ReadSettingsFromXml();
+                }
+                catch (XmlException)
+                {
+                    string message = string.Format("The structure of the xml document is broken\n");
+                    Logger.WriteTextToLog(message);
+                    Console.Write(message);
+                }
             }
             else
             {
@@ -257,7 +267,20 @@ namespace EncodingConverter
                                     {
                                         if (!Extensions.Contains(childNode.InnerText))
                                         {
-                                            Extensions.Add(childNode.InnerText);
+                                            string extension = childNode.InnerText;
+
+                                            // Убирает из расширения пробелы. Удостоверяется в том, что расширение состоит только из цифр и букв латинского алфавита
+                                            extension = Regex.Replace(extension, @"\s+", string.Empty);
+                                            if (Regex.IsMatch(extension, @"^[a-zA-Z0-9]+$"))
+                                            {
+                                                Extensions.Add(extension);
+                                            }
+                                            else
+                                            {
+                                                string message = string.Format("The specified file extension is incorrect - {0}\n", extension);
+                                                Logger.WriteTextToLog(message);
+                                                Console.Write(message);
+                                            }
                                         }
                                     }
                                 }
